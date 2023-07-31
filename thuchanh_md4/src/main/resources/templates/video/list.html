@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title> List</title>
+    <link rel="stylesheet" href="/assets/bootstrap/v5.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/assets/fontawesome/v5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="/assets/sweetalert2/v11.7.12/sweetalert2.min.css">
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <script src="/assets/bootstrap/v5.3.0/js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
+<div class="container-fluid">
+    <header>
+        <div class="col-lg-6">
+            <h1>Danh sách video</h1>
+        </div>
+        <div class="col-lg-6 header-right-button">
+<!--            <a href="#">-->
+<!--                <button class="btn btn-outline-light">-->
+<!--                    <i class="fas fa-history"></i>-->
+<!--                    Transfer histories-->
+<!--                </button>-->
+<!--            </a>-->
+            <button class="btn btn-outline-light" id="btnShowCreateModal">
+                <i class="fas fa-user-plus"></i>
+                Add new customer
+            </button>
+        </div>
+    </header>
+
+    <div class="content">
+        <table class="table table-hover" id="tbCustomer">
+            <thead>
+            <tr>
+                <th class="text-center"></th>
+                <th class="text-center">#</th>
+                <th class="text-center">Title</th>
+                <th class="text-center">Description</th>
+                <th class="text-center">Playlist</th>
+                <th class="text-center">Action</th>
+
+            </tr>
+            </thead>
+            <tbody>
+
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<footer class="container-fluid">
+
+</footer>
+
+<!--<th:block th:replace="customer/modalCreate" />-->
+<!--<th:block th:replace="customer/modalEdit" />-->
+
+
+
+<script src="/assets/js/jquery-3.6.0.min.js"></script>
+<script src="/assets/js/jquery.validate.min.js"></script>
+<script src="/assets/sweetalert2/v11.7.12/sweetalert2.all.min.js"></script>
+<script src="/assets/js/app.js"></script>
+<script src="/assets/fontawesome/v5.15.4/js/all.min.js"></script>
+
+<script>
+    const page = {
+        url: {
+            getAllCustomers: App.API_VIDEO ,
+            updateCustomer: App.API_VIDEO,
+
+        },
+        elements: {},
+        loadData: {},
+        commands: {},
+        dialogs: {
+            elements: {},
+            commands: {}
+        },
+        initializeControlEvent: {}
+    }
+
+    page.elements.btnShowCreateModal = $('#btnShowCreateModal');
+    page.elements.tbCustomerBody = $('#tbCustomer tbody');
+
+    page.dialogs.elements.modalCreate = $('#modalCreate');
+    page.dialogs.elements.frmCreate = $('#frmCreate');
+    page.dialogs.elements.errorAreaCreate = $('#modalCreate .error-area');
+    page.dialogs.elements.fullNameCre = $('#fullNameCre');
+    page.dialogs.elements.emailCre = $('#emailCre');
+    page.dialogs.elements.phoneCre = $('#phoneCre');
+    page.dialogs.elements.locationRegionIdCre = $('#locationRegionIdCre')
+    page.dialogs.elements.provinceCre = $('#provinceCre')
+    page.dialogs.elements.districtCre = $('#districtCre')
+    page.dialogs.elements.wardCre = $('#wardCre')
+    page.dialogs.elements.addressCre = $('#addressCre');
+    page.dialogs.elements.btnCreate = $('#btnCreate');
+
+    page.dialogs.elements.modalUpdate = $('#modalUpdate');
+    page.dialogs.elements.frmUpdate = $('#frmUpdate');
+    page.dialogs.elements.errorAreaUpdate = $('#modalUpdate .error-area');
+    page.dialogs.elements.fullNameUp = $('#fullNameUp');
+    page.dialogs.elements.emailUp = $('#emailUp');
+    page.dialogs.elements.phoneUp = $('#phoneUp');
+    page.dialogs.elements.locationRegionIdUp = $('#locationRegionIdUp')
+    page.dialogs.elements.provinceUp = $('#provinceUp')
+    page.dialogs.elements.districtUp = $('#districtUp')
+    page.dialogs.elements.wardUp = $('#wardUp')
+    page.dialogs.elements.addressUp = $('#addressUp');
+    page.dialogs.elements.btnUpdate = $('#btnUpdate');
+
+    page.elements.footer = $('footer');
+
+
+    let video = new Video();
+
+    page.commands.renderVideo = (video) => {
+        return `
+                <tr id="tr_${video.id}">
+                <td><span class="select-tab unselected"></span></td>
+                    <td class="text-center">${video.id}</td>
+                    <td class="text-center">${video.title}</td>
+                    <td class="text-center">${video.description}</td>
+                    <td class="text-center">${video.playlist}</td>
+                    <td class="text-center">
+                    <i class="fas fa-edit"></i>
+                    <i class="fas fa-trash-alt"></i>
+                </tr>
+            `;
+    }
+
+
+    page.commands.getAllVideos = () => {
+        page.elements.tbCustomerBody.empty();
+
+        $.ajax({
+            type: 'GET',
+            url: page.url.getAllCustomers
+        })
+            .done((data) => {
+                data.forEach(item => {
+                    video = item;
+                    const str = page.commands.renderVideo(video);
+                    page.elements.tbCustomerBody.prepend(str);
+                });
+            })
+            .fail((error) => {
+                console.log(error);
+            })
+    }
+
+    page.commands.handleAddEventShowModalUpdate = (customerId) => {
+        page.commands.getCustomerById(customerId).then((data) => {
+            customer = data;
+            locationRegion  = customer.locationRegion;
+            page.dialogs.elements.fullNameUp.val(customer.fullName);
+            page.dialogs.elements.emailUp.val(customer.email);
+            page.dialogs.elements.phoneUp.val(customer.phone);
+            page.dialogs.elements.addressUp.val(locationRegion.address);
+
+            page.dialogs.elements.provinceUp.val(locationRegion.provinceId)
+
+            page.commands.getAllDistricts(locationRegion.provinceId, page.dialogs.elements.districtUp).then(() => {
+                page.dialogs.elements.districtUp.val(locationRegion.districtId);
+
+                page.commands.getAllWards(locationRegion.districtId, page.dialogs.elements.wardUp).then(() => {
+                    page.dialogs.elements.wardUp.val(locationRegion.wardId);
+                });
+            });
+
+            page.dialogs.elements.modalUpdate.modal('show');
+        })
+            .catch((error) => {
+                console.log(error)
+            })
+    }
+
+    page.dialogs.commands.update = () => {
+        let provinceId = page.dialogs.elements.provinceUp.val();
+        let provinceName = page.dialogs.elements.provinceUp.find('option:selected').text();
+        let districtId = page.dialogs.elements.districtUp.val();
+        let districtName = page.dialogs.elements.districtUp.find('option:selected').text();
+        let wardId = page.dialogs.elements.wardUp.val();
+        let wardName = page.dialogs.elements.wardUp.find('option:selected').text();
+        let address = page.dialogs.elements.addressUp.val();
+
+        locationRegion.provinceId = provinceId;
+        locationRegion.provinceName = provinceName;
+        locationRegion.districtId = districtId;
+        locationRegion.districtName = districtName;
+        locationRegion.wardId = wardId;
+        locationRegion.wardName = wardName;
+        locationRegion.address = address;
+
+        let fullName = page.dialogs.elements.fullNameUp.val();
+        let email = page.dialogs.elements.emailUp.val();
+        let phone = page.dialogs.elements.phoneUp.val();
+
+        customer.fullName = fullName;
+        customer.email = email;
+        customer.phone = phone;
+        customer.locationRegion = locationRegion;
+
+
+        $.ajax({
+            headers: {
+                'accept': 'application/json',
+                'content-type': 'application/json'
+            },
+            type: 'PATCH',
+            url: page.url.updateCustomer + '/' + customerId,
+            data: JSON.stringify(customer)
+        })
+            .done((data) => {
+                customer = data;
+                locationRegion = customer.locationRegion;
+
+                const str = page.commands.renderCustomer(customer,locationRegion)
+                $('#tr_' + customerId).replaceWith(str)
+
+                page.dialogs.elements.modalUpdate.modal('hide');
+
+                App.showSuccessAlert('Chỉnh sửa thành công')
+
+
+            })
+            .fail((jqXHR) => {
+                const responseJSON = jqXHR.responseJSON;
+
+                page.dialogs.elements.errorAreaUpdate.empty();
+                let str = '';
+
+                $.each(responseJSON, (k, v) => {
+                    str += `<label for="${k}Up">${v}</label>`
+                })
+
+                page.dialogs.elements.errorAreaUpdate.append(str).removeClass('hide').addClass('show');
+
+                console.log(jqXHR);
+            })
+    }
+
+
+
+
+
+
+
+    page.dialogs.commands.create = () => {
+        const provinceId = page.dialogs.elements.provinceCre.val();
+        const provinceName = page.dialogs.elements.provinceCre.find('option:selected').text();
+        const districtId = page.dialogs.elements.districtCre.val();
+        const districtName = page.dialogs.elements.districtCre.find('option:selected').text();
+        const wardId = page.dialogs.elements.wardCre.val();
+        const wardName = page.dialogs.elements.wardCre.find('option:selected').text();
+        const address = page.dialogs.elements.addressCre.val();
+
+        locationRegion.provinceId = provinceId;
+        locationRegion.provinceName = provinceName;
+        locationRegion.districtId = districtId;
+        locationRegion.districtName = districtName;
+        locationRegion.wardId = wardId;
+        locationRegion.wardName = wardName;
+        locationRegion.address = address;
+
+
+        const fullName = page.dialogs.elements.fullNameCre.val();
+        const email = page.dialogs.elements.emailCre.val();
+        const phone = page.dialogs.elements.phoneCre.val();
+
+        customer.fullName = fullName;
+        customer.email = email;
+        customer.phone = phone;
+        customer.locationRegion = locationRegion;
+
+
+        $.ajax({
+            headers: {
+                'accept': 'application/json',
+                'content-type': 'application/json'
+            },
+            type: 'POST',
+            url: page.url.createCustomer,
+            data: JSON.stringify(customer)
+        })
+            .done((data) => {
+                customer = data;
+                locationRegion = customer.locationRegion;
+
+                const str = page.commands.renderCustomer(customer, locationRegion);
+                page.elements.tbCustomerBody.prepend(str);
+
+                page.dialogs.elements.modalCreate.modal('hide');
+
+                App.showSuccessAlert('Thêm mới khách hàng thành công');
+            })
+            .fail((jqXHR) => {
+                const responseJSON = jqXHR.responseJSON;
+
+                page.dialogs.elements.errorAreaCreate.empty();
+                let str = '';
+
+                $.each(responseJSON, (k, v) => {
+                    str += `<label for="${k}Cre">${v}</label>`
+                })
+
+                page.dialogs.elements.errorAreaCreate.append(str).removeClass('hide').addClass('show');
+
+                console.log(jqXHR);
+            })
+    }
+
+
+    page.initializeControlEvent = () => {
+
+        page.elements.btnShowCreateModal.on('click', () => {
+            page.dialogs.elements.modalCreate.modal('show');
+        })
+
+
+
+
+        page.elements.footer.on('click', '.delete', function () {
+            customerId = $(this).data('id');
+            page.commands.handleAddEventModalDelete(customerId);
+        })
+
+        page.elements.footer.on('click', '.edit', function () {
+            customerId = $(this).data('id');
+            page.commands.handleAddEventShowModalUpdate(customerId);
+        })
+
+
+
+        page.dialogs.elements.btnCreate.on('click', () => {
+            page.dialogs.commands.create();
+        })
+
+
+
+        page.dialogs.elements.btnUpdate.on('click', () => {
+            page.dialogs.elements.frmUpdate.trigger("submit");
+        })
+
+
+
+        page.dialogs.commands.closeModalCreate = () => {
+            page.dialogs.elements.frmCreate[0].reset();
+        }
+
+        page.dialogs.elements.modalCreate.on("hidden.bs.modal", function () {
+            page.dialogs.commands.closeModalCreate();
+        })
+
+        page.dialogs.commands.closeModalUpdate = () => {
+            page.dialogs.elements.frmUpdate[0].reset();
+        }
+
+        page.dialogs.elements.modalUpdate.on("hidden.bs.modal", function () {
+            page.dialogs.commands.closeModalUpdate();
+        })
+
+        page.dialogs.elements.modalTransfer.on("hidden.bs.modal", function () {
+            page.dialogs.commands.closeModalTransfer();
+        });
+
+
+
+    }
+
+
+    page.dialogs.elements.frmCreate.validate({
+        rules: {
+            fullNameCre: {
+                required: true
+            },
+            emailCre: {
+                required: true
+            }
+        },
+        messages: {
+            fullNameCre: {
+                required: 'Tên không cho phép rỗng,'
+            },
+            emailCre: {
+                required: 'Email là bắt buộc'
+            }
+        },
+        errorLabelContainer: "#modalCreate .error-area",
+        errorPlacement: function (error, element) {
+            error.appendTo("#modalCreate .error-area");
+        },
+        showErrors: function (errorMap, errorList) {
+            if (this.numberOfInvalids() > 0) {
+                page.dialogs.elements.errorAreaCreate.removeClass("hide").addClass("show");
+            } else {
+                page.dialogs.elements.errorAreaCreate.removeClass("show").addClass("hide").empty();
+                $("#frmCreate input.error").removeClass("error");
+            }
+            this.defaultShowErrors();
+        },
+        submitHandler: function () {
+            page.dialogs.commands.create();
+        }
+    })
+
+
+
+
+
+    page.dialogs.elements.frmUpdate.validate({
+        rules: {
+            fullNameUp: {
+                required: true
+            },
+            emailUp: {
+                required: true
+            }
+        },
+        messages: {
+            fullNameUp: {
+                required: 'Tên không cho phép rỗng'
+            },
+            emailUp: {
+                required: 'Email là bắt buộc'
+            }
+        },
+        errorLabelContainer: "#modalUpdate .error-area",
+        errorPlacement: function (error, element) {
+            error.appendTo("#modalUpdate .error-area");
+        },
+        showErrors: function (errorMap, errorList) {
+            if (this.numberOfInvalids() > 0) {
+                page.dialogs.elements.errorAreaUpdate.removeClass("hide").addClass("show");
+            } else {
+                page.dialogs.elements.errorAreaUpdate.removeClass("show").addClass("hide").empty();
+                $("#frmUpdate input.error").removeClass("error");
+            }
+            this.defaultShowErrors();
+        },
+        submitHandler: function () {
+            page.dialogs.commands.update();
+        }
+    })
+
+
+
+
+    page.loadData = () => {
+        page.commands.getAllVideos();
+
+    }
+
+    $(() => {
+        page.loadData();
+
+        page.initializeControlEvent();
+    })
+
+</script>
+
+</body>
+</html>
